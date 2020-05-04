@@ -1,3 +1,4 @@
-webApi/config/
-webApi/node_modules/
-webApi/package-lock.json
+config/
+node_modules/
+package-lock.json
+.vscode
