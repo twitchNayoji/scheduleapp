@@ -38,5 +38,29 @@ module.exports = {
         res.json(result);
       });
     }
+  },
+  //登録した設定をもとに、シフト表を計算して出力
+  doCalculateShiftSchedule: function (req, res, next) {
+    var params = req.params;
+    var hashid = params.id;
+    if (!hashid) {
+      res.json(null);
+      return;
+    }
+    // hashidをもとにschedule設定を取得
+    Schedule.calculateSchedule(hashid).then((result) => {
+      //Todo 読みやすいよう整形しているだけなので後ほど削除
+      for (let [key, element] of Object.entries(result.daysMembers)) {
+        element.member.morning = element.member[0];
+        element.member.evening = element.member[1];
+        delete element.member[0];
+        delete element.member[1];
+      }
+      //計算結果を返却
+      //Todo jsonを返却するよう修正　→send=>json、stringify=>削除
+      res.send(JSON.stringify(result, null, 4));
+    });
+
   }
+
 }

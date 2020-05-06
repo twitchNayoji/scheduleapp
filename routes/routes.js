@@ -17,6 +17,9 @@ router.use('/st/', express.static('public'));
 router.get('/schedule/:id', scheduleController.doGetSchedule);
 router.post('/schedule', scheduleController.doPostSchedule);
 router.get('/schedule/:scheduleid/rules(/:rulecategory)?', scheduleController.doGetScheduleRule);
+//シフト表の出力
+router.get('/schedule/:id/calculate',scheduleController.doCalculateShiftSchedule);
+
 
 module.exports = router;
 
