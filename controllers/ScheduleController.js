@@ -53,8 +53,8 @@ module.exports = {
       for (let [key, element] of Object.entries(result.daysMembers)) {
         element.member.morning = element.member[0];
         element.member.evening = element.member[1];
-        delete element.member[0];
-        delete element.member[1];
+        // delete element.member[0];
+        // delete element.member[1];
       }
       //計算結果を返却
       //Todo jsonを返却するよう修正　→send=>json、stringify=>削除
