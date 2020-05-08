@@ -33,9 +33,34 @@ function calcProduct(array, number) {
     return ans;
 }
 
-module.exports = {
-    calcProduct
+/**
+ * 配列内の最大値を検索する
+ * @param {[]} array 
+ */
+function getArrayMaxVal(array){
+    return array.reduce((a,b)=>a>b?a:b);
 }
+
+
+/**
+ * 配列内の最小値を検索する
+ * @param {Number[]} array 
+ */
+function getArrayMinVal(array){
+    return array.reduce((a,b)=>a>b?b:a);
+}
+
+module.exports = {
+    calcProduct,
+    getArrayMaxVal,
+    getArrayMinVal
+}
+
+
+// var test = [11,2,333,2,0,44,55,-1];
+// console.log(getArrayMaxVal(test));
+// console.log(getArrayMinVal(test));
+
 
 // const x = new Set([1, 2, 3]);
 // const product = new Set(

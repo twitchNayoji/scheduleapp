@@ -279,7 +279,7 @@ function validateShift(scheduleSettings, calShift, validateDayNumTo) {
         if (daynum > validateDayNumTo) {
             break;
         }
-        
+
         /** 1日単位のチェック **/
         //連続勤務許可日数を超えてシフトに入っている場合、アウト
         if (daynum >= maxworkdaynum - 1) {
@@ -315,14 +315,14 @@ function validateShift(scheduleSettings, calShift, validateDayNumTo) {
                     //結果が空の場合は、３連続同じ人が勤務することはないので処理を終了
                     break;
                 }
-                if(contMembers==null){
+                if (contMembers == null) {
                     contMembers = intersection;
-                }else{
+                } else {
                     contMembers = new Set([...contMembers].filter(e => (intersection.has(e))));
                 }
             }
 
-            if(contMembers!=null){
+            if (contMembers != null) {
                 //連続勤務者が存在する場合、エラー
                 if (contMembers.size > 0) {
                     return false;
@@ -362,13 +362,42 @@ function validateShift(scheduleSettings, calShift, validateDayNumTo) {
                 //個人のチェック
             }
         }
-    }
-
-    // Todo 最終日まで全部埋めたとき限定のチェック処理
-    if(validateDayNumTo == calShift.dayNum){
-        //メンバー毎の割り当て数を計算し、均等化（MAX - MIN = 1）
 
     }
+
+    // 6日単位で、割り当て人数の均等化☑を実施、ただし最終日でも確認
+    if (validateDayNumTo % 6 == 0 || validateDayNumTo == calShift.dayNum - 1) {
+        var membercount = {};
+        //メンバーで初期化
+        scheduleSettings.members.forEach(e => {
+            membercount[e.name] = 0;
+        });
+        for (let [mormemnum, daysetting] of Object.entries(calShift.daysMembers)) {
+            var members = [...Object.values(daysetting.getMorningMembers()), ...Object.values(daysetting.getEveningMembers())];
+            members.forEach(e => {
+                if(e){
+                    membercount[e] += 1;
+                }
+            });
+        }
+        //メンバーごとの合計から、最大値と最小値を取得
+        var membersummary = Object.values(membercount);
+        //最大値を取得
+        var maxMemberCount = util.getArrayMaxVal(membersummary);
+        var minMemberCount = util.getArrayMinVal(membersummary);
+        //勤務日の差が２日以上ある場合は、チェックエラー
+        //Todo 1をパラメータ化
+        if (maxMemberCount - minMemberCount > 1) {
+            return false;
+        } else {
+            //Todo デバッグ用、後で削除
+            if (validateDayNumTo == calShift.dayNum - 1) {
+                console.log(membercount);
+            }
+        }
+    }
+
+
 
     return true;
 }
