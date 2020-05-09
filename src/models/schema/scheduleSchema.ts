@@ -1,7 +1,8 @@
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
+import mongoose from "mongoose";
+import ScheduleController from "../../controllers/ScheduleController";
+const Schema = mongoose.Schema;
 
-var Schedule = new Schema({
+const Schedule =new Schema({
   year: {
     type: Number
   },
@@ -15,4 +16,4 @@ var Schedule = new Schema({
   members: [{ id: String, name: String, rules: [{ category: String, val1: String, val2: String, val3: String }], val3: String }]
 }, { collection: 'schedule' });
 
-module.exports = Schedule;
+export default Schedule;

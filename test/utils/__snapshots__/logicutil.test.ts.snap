@@ -1,0 +1,141 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`array 要素数3, number = 3 1`] = `
+Array [
+  Array [
+    "hoge",
+    "hoge",
+    "hoge",
+  ],
+  Array [
+    "fuga",
+    "hoge",
+    "hoge",
+  ],
+  Array [
+    "piyo",
+    "hoge",
+    "hoge",
+  ],
+  Array [
+    "hoge",
+    "fuga",
+    "hoge",
+  ],
+  Array [
+    "fuga",
+    "fuga",
+    "hoge",
+  ],
+  Array [
+    "piyo",
+    "fuga",
+    "hoge",
+  ],
+  Array [
+    "hoge",
+    "piyo",
+    "hoge",
+  ],
+  Array [
+    "fuga",
+    "piyo",
+    "hoge",
+  ],
+  Array [
+    "piyo",
+    "piyo",
+    "hoge",
+  ],
+  Array [
+    "hoge",
+    "hoge",
+    "fuga",
+  ],
+  Array [
+    "fuga",
+    "hoge",
+    "fuga",
+  ],
+  Array [
+    "piyo",
+    "hoge",
+    "fuga",
+  ],
+  Array [
+    "hoge",
+    "fuga",
+    "fuga",
+  ],
+  Array [
+    "fuga",
+    "fuga",
+    "fuga",
+  ],
+  Array [
+    "piyo",
+    "fuga",
+    "fuga",
+  ],
+  Array [
+    "hoge",
+    "piyo",
+    "fuga",
+  ],
+  Array [
+    "fuga",
+    "piyo",
+    "fuga",
+  ],
+  Array [
+    "piyo",
+    "piyo",
+    "fuga",
+  ],
+  Array [
+    "hoge",
+    "hoge",
+    "piyo",
+  ],
+  Array [
+    "fuga",
+    "hoge",
+    "piyo",
+  ],
+  Array [
+    "piyo",
+    "hoge",
+    "piyo",
+  ],
+  Array [
+    "hoge",
+    "fuga",
+    "piyo",
+  ],
+  Array [
+    "fuga",
+    "fuga",
+    "piyo",
+  ],
+  Array [
+    "piyo",
+    "fuga",
+    "piyo",
+  ],
+  Array [
+    "hoge",
+    "piyo",
+    "piyo",
+  ],
+  Array [
+    "fuga",
+    "piyo",
+    "piyo",
+  ],
+  Array [
+    "piyo",
+    "piyo",
+    "piyo",
+  ],
+]
+`;
