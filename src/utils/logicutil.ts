@@ -33,31 +33,38 @@ import Combinatorics from "js-combinatorics";
 //     return ans;
 // }
 
-function calcProduct(array:any[], dimNum:number) {
-    return Combinatorics.baseN(array,dimNum).toArray();
+function calcProduct(array: any[], dimNum: number) {
+    return Combinatorics.baseN(array, dimNum).toArray();
 }
 
 /**
- * 配列内の最大値を検索する
+ * 配列内の最大値を検索する。
+ * 空の配列の場合は、0を返却する。
  * @param {[]} array
  */
-function getArrayMaxVal(array:number[]){
-    return array.reduce((a,b)=>a>b?a:b);
+function getArrayMaxVal(array: number[]): number {
+    if (array === null || array.length === 0) {
+        return 0;
+    }
+    return array.reduce((a, b) => a > b ? a : b);
 }
 
 /**
  * 配列内の最小値を検索する
  * @param {Number[]} array
  */
-function getArrayMinVal(array:number[]){
-    return array.reduce((a,b)=>a>b?b:a);
+function getArrayMinVal(array: number[]): number {
+    if (array === null || array.length === 0) {
+        return 0;
+    }
+    return array.reduce((a, b) => a > b ? b : a);
 }
 
 /**
  * 0 ~ max-1?までの乱数を生成
  * @param max 乱数の最大値
  */
-function getRandomInt(max:number) {
+function getRandomInt(max: number) {
     return Math.floor(Math.random() * Math.floor(max));
 }
 
@@ -111,7 +118,7 @@ export default {
 //  calresult = calcProduct(xx, 4);
 //  console.timeEnd('timer1');
 
- 
+
 // console.time('timer2');
 // calgen = calcProductCN(xx, 4);
 // calresult2 = calgen.toArray();
