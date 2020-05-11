@@ -78,10 +78,23 @@ function doCalculateShiftSchedule(req: Express.Request, res: Express.Response, n
     //   // delete element.member[0];
     //   // delete element.member[1];
     // }
+    type retType = {
+      reslt: Shift | null,
+      daymembers: any
+    }
+    let daymemberlist = null;
+    if (result) {
+      daymemberlist= result.daysMembers.map(x => {
+        if (x.memTotals) {
+          return [...x.memTotals];
+        }
+      })
+    }
+    const ret: retType = { reslt: result, daymembers: daymemberlist };
 
     // 計算結果を返却
     // Todo jsonを返却するよう修正　→send=>json、stringify=>削除
-    res.send(JSON.stringify(result, null, 4));
+    res.send(JSON.stringify(ret, null, 4));
   });
 }
 export default {

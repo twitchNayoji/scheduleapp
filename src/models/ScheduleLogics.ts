@@ -1,12 +1,15 @@
 // mongooseを利用
 import mongoose from "mongoose";
 
+// deepCopyにlodashを利用
+import lodash from "lodash";
+
 // Scheduleスキーマを読み込み
 import schedule from "./schema/scheduleSchema";
 
 // utilを読み込み
 import util from "../utils/logicutil";
-import { isNull } from "util";
+
 function getSchedule(hashid: string) {
     return new Promise((resolve, reject) => {
         const ScheduleModel = mongoose.model('schedule', schedule);
@@ -120,14 +123,22 @@ export default {
 //     }
 // }
 
+// 集計用
+type MemberTotal = {
+    contDayNum: number,
+    totalDayNum: number
+}
+
 /**
- * メンバーの添え字は1から！
+ *
  * Todo 別ファイルへ
  */
 export class DaySetting {
     // daySettingパターンId
     patternId: number;
     member: string[][];
+    // Todo 当日の集計状況の断面
+    memTotals: Map<string, MemberTotal> | null;
     // 1日当たりの人数を引数とする
     constructor(peopleperday: number) {
         this.member = [];
@@ -140,6 +151,7 @@ export class DaySetting {
             this.member[1][i] = "";
         }
         this.patternId = 0;
+        this.memTotals = null;
     }
     public getMorningMembers() {
         return this.member[0];
@@ -153,6 +165,9 @@ export class DaySetting {
     public getEveningMember(memberIndex: number) {
         return this.member[1][memberIndex];
     }
+    public getAllMember() {
+        return [...this.member[0], ...this.member[1]];
+    }
     public setMorningMember(memberIndex: number, val: string) {
         this.member[0][memberIndex] = val;
     }
@@ -160,6 +175,7 @@ export class DaySetting {
         this.member[1][memberIndex] = val;
     }
 }
+
 
 // Todo コントローラにわたすためのDTOとしてクラス作成
 export class Shift {
@@ -202,6 +218,7 @@ export class Shift {
     }
 }
 
+
 // Todo:scheduleSettingsのanyをクラス？schema？あたりに。←mongoose.documentを継承したインタフェースにする
 function setMembersToShift(scheduleSettings: any) {
     /*** 何年、何月のカレンダーか、１日当たりの割り当てメンバー数を指定して
@@ -211,11 +228,15 @@ function setMembersToShift(scheduleSettings: any) {
     const peopleperday = scheduleSettings.peopleperday;
     const format = new Shift(year, month, 2);
 
+
     // Todo 組み合わせ最適化問題？として問題を解くよう修正？
 
     /*** 1日の埋め方パターンを作る **/
     const patterns: DaySetting[] = createDayMemberPattern(peopleperday, scheduleSettings);
     const patternIdMax = util.getArrayMaxVal(patterns.map(x => x.patternId));
+
+    /*** 集計用のMapをメンバーをもとに初期化 */
+    let memberTotals = createZeroMemberTotals(scheduleSettings);
 
     /*** パターンをもとにシフト表作成 **/
     // メンバーを順に割り当て
@@ -224,27 +245,103 @@ function setMembersToShift(scheduleSettings: any) {
     while (targetDayNum < dayNumMax && targetDayNum >= 0) {
         // patternIdは1から降られており、patternsに添え字0から追加されていっているので
         // patternIdはそのまま次のpatternの添え字として利用できる
+        let tempMemberTotals = memberTotals;
         const nextPatternId = format.daysMembers[targetDayNum].patternId;
         if (nextPatternId < patternIdMax) {
             // パターンがmaxに行ってない場合は、次のパターンを設定
-            format.daysMembers[targetDayNum] = patterns[nextPatternId];
+            const nextPattern = patterns[nextPatternId];
+            format.daysMembers[targetDayNum] = nextPattern;
+            tempMemberTotals = addDaySettingMemberToMemberTotals(memberTotals, nextPattern);
         }
         else {
             // 処理日のdaysmemberを初期化
             format.daysMembers[targetDayNum] = new DaySetting(peopleperday);
             // 処理日を1日前に戻す。
             targetDayNum -= 1;
+            if (targetDayNum > 0) {
+                // 集計結果を前々日の結果に戻す。
+                const preMemTotals = format.daysMembers[targetDayNum - 1].memTotals;
+                if (preMemTotals) {
+                    memberTotals = preMemTotals;
+                }
+            } else if (targetDayNum === 0) {
+                // 初日に戻った場合は、集計結果を初期値に戻す。
+                memberTotals = setZeroToMemberTotals(memberTotals);
+            }
             console.log("後退した。。。 To：" + targetDayNum);
+            continue;
         }
-        if (validateShift(scheduleSettings, format, targetDayNum)) {
+        if (validateShift(scheduleSettings, format, targetDayNum, tempMemberTotals)) {
+            memberTotals = tempMemberTotals;
+            format.daysMembers[targetDayNum].memTotals = memberTotals;
             targetDayNum += 1;
             console.log("進んだ！ To：" + targetDayNum);
         }
     }
 
+    if (targetDayNum < 0) {
+        console.log("見つからず・・・");
+    }
+
     return format;
 }
 
+function createZeroMemberTotals(scheduleSettings: any) {
+    const retVal = new Map<string, MemberTotal>();
+    scheduleSettings.members.forEach((e: { id: string, name: string, rules: any }) => {
+        const obj: MemberTotal = {
+            contDayNum: 0,
+            totalDayNum: 0
+        }
+        retVal.set(e.name, obj);
+    });
+    return retVal;
+}
+
+function setZeroToMemberTotals(memberTotals: Map<string, MemberTotal>) {
+    for (const key of memberTotals.keys()) {
+        const obj: MemberTotal = {
+            contDayNum: 0,
+            totalDayNum: 0
+        }
+        memberTotals.set(key, obj);
+    }
+    return memberTotals;
+}
+
+function addDaySettingMemberToMemberTotals(memberTotals: Map<string, MemberTotal>, nextPattern: DaySetting): Map<string, MemberTotal> {
+    // 割り当て数、連続数の更新
+    const allMember = nextPattern.getAllMember();
+    // 破壊しないよう・・・
+    const retTotals = lodash.cloneDeep(memberTotals);
+    allMember.forEach(member => {
+        const memTotal = retTotals.get(member);
+        if (memTotal !== undefined) {
+            memTotal.contDayNum += 1;
+            memTotal.totalDayNum += 1;
+            retTotals.set(member, memTotal);
+        }
+    });
+
+    const resetTargetMember: string[] = [];
+    // 連続してない人の初期化
+    retTotals.forEach((val, key) => {
+        // 連続数の更新
+        if (!allMember.includes(key)) {
+            resetTargetMember.push(key);
+        }
+    });
+
+    resetTargetMember.forEach(member => {
+        const memTotal = retTotals.get(member);
+        if (memTotal !== undefined) {
+            memTotal.contDayNum = 0;
+            retTotals.set(member, memTotal);
+        }
+    })
+
+    return retTotals;
+}
 
 function createDayMemberPattern(peopleperday: number, scheduleSettings: any): DaySetting[] {
     const patterns: DaySetting[] = [];
@@ -284,94 +381,45 @@ function createDayMemberPattern(peopleperday: number, scheduleSettings: any): Da
  * @param {*} calShift
  * @param {number} validateDayNumTo 指定した日数を含む
  */
-function validateShift(scheduleSettings: any, calShift: Shift, validateDayNumTo: number) {
+function validateShift(scheduleSettings: any, calShift: Shift, validateDayNumTo: number, memberTotals: Map<string, MemberTotal>) {
     // Todo scheduleSettingsを活用
     // 1日当たりの割り当て数
     const peoplePerDay = scheduleSettings.peopleperday;
     // 連続勤務許可日数
     const maxworkdaynum = 3;
 
+    /*** 当日だけのチェックを実施 */
+    // 勤務日の均等化チェック
+    const memberTotalsummary = [...memberTotals.values()].map(x => x.totalDayNum);
+    // 最大値と最小値を取得
+    const maxMemberCount = util.getArrayMaxVal(memberTotalsummary);
+    const minMemberCount = util.getArrayMinVal(memberTotalsummary);
+    // 勤務日の差が２日以上ある場合は、チェックエラー
+    // Todo 1をパラメータ化
+    if (maxMemberCount - minMemberCount > 1) {
+        return false;
+    }
+
+    // 連続勤務者チェック
+    // Todo 3 をパラメータ化
+    const memberContsummary = [...memberTotals.values()].map(x => x.contDayNum).filter(x => x >= 3);
+    // 一人以上対象者がいた場合はエラー
+    if (memberContsummary.length > 0) {
+        return false;
+    }
+
+    // Todo 以下、現状処理が存在しないため、コメントアウト
     // 計算結果のシフト表をvalidate
     // メンバーを順に割り当て
-    const dayNumMax = Object.keys(calShift.daysMembers).length;
-    for (let daynum = 0; daynum < dayNumMax; daynum++) {
-        const daymember = calShift.daysMembers[daynum];
-        // 指定した日付まで検査する。
-        if (daynum > validateDayNumTo) {
-            break;
-        }
+    // const dayNumMax = Object.keys(calShift.daysMembers).length;
+    // for (let daynum = 0; daynum < dayNumMax; daynum++) {
+    //     const daymember = calShift.daysMembers[daynum];
+    //     // 指定した日付まで検査する。
+    //     if (daynum > validateDayNumTo) {
+    //         break;
+    //     }
+    // }
 
- 　     // Todo ★連続勤務日、割当日を、総洗いで毎回集計しなおすのではなく、パラメータ化しスケジュールに設定する段階でインクリメントするとパフォーマンス↑↑↑
-        /*** 1日単位のチェック **/
-        // 連続勤務許可日数を超えてシフトに入っている場合、アウト
-        if (daynum >= maxworkdaynum - 1) {
-            // 連続勤務者SET
-            let contMembers: Set<string> | null = null;
-            // 処理対象日と、その前の日を比較
-            for (let checkdaynum = daynum - (maxworkdaynum - 1); checkdaynum < daynum; checkdaynum++) {
-                // 本日のメンバーSETを作成
-                const todaymemberset = new Set<string>();
-                // Todo 最終的にIDになる
-                daymember.getMorningMembers().forEach(morningmember=>{todaymemberset.add(morningmember)});
-                daymember.getEveningMembers().forEach(eveningmember=>{todaymemberset.add(eveningmember)});
-
-                // チェック対象処理日のメンバーSETを作成
-                const checkdaymemberset = new Set<string>();
-                // Todo 最終的にIDになる
-                calShift.daysMembers[checkdaynum].getMorningMembers().forEach(morningmember=>{checkdaymemberset.add(morningmember)});
-                calShift.daysMembers[checkdaynum].getEveningMembers().forEach(eveningmember=>{checkdaymemberset.add(eveningmember)});
-
-                // 二つのSETの積集合を計算して、結果が空集合ならOK
-                // Todo hasの判定
-                const intersectionCont = new Set([...todaymemberset].filter(e => (checkdaymemberset.has(e))));
-                if (intersectionCont.size === 0) {
-                    // 結果が空の場合は、３連続同じ人が勤務することはないので、処理をやめる
-                    break;
-                }
-                if (contMembers == null) {
-                    contMembers = intersectionCont;
-                } else {
-                    const contMembersArray: string[] = [...contMembers];
-                    contMembers = new Set(contMembersArray.filter(e => (intersectionCont.has(e))));
-                }
-            }
-
-            if (contMembers != null) {
-                // 連続勤務者が存在する場合、エラー
-                if (contMembers.size > 0) {
-                    return false;
-                }
-            }
-        }
-        // 毎日、割り当て人数の均等化を実施、ただし最終日でも確認
-        const membercount: Map<string, number> = new Map<string, number>();
-        // メンバーで初期化
-        scheduleSettings.members.forEach((e: { id: string, name: string, rules: any }) => {
-            membercount.set(e.name, 0);
-        });
-        calShift.daysMembers.forEach(daysetting =>{
-            const members = [...daysetting.getMorningMembers(), ...daysetting.getEveningMembers()];
-            members.forEach((e) => {
-                if (e) {
-                    let currentCount = membercount.get(e);
-                    if (currentCount === undefined) { currentCount = 0 }
-                    const nextCount = currentCount + 1;
-                    membercount.set(e, nextCount);
-                }
-            });
-
-        });
-        // メンバーごとの合計から、最大値と最小値を取得
-        const membersummary = Object.values(membercount);
-        // 最大値を取得
-        const maxMemberCount = util.getArrayMaxVal(membersummary);
-        const minMemberCount = util.getArrayMinVal(membersummary);
-        // 勤務日の差が２日以上ある場合は、チェックエラー
-        // Todo 1をパラメータ化
-        if (maxMemberCount - minMemberCount > 1) {
-            return false;
-        }
-    }
     return true;
 }
 
