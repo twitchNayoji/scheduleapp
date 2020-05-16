@@ -13,5 +13,9 @@ import router from "./routes/routes";
 // ルーターを使用する
 app.use('/', router);
 
+// EJSの設定
+app.set("view engine", "ejs");
+app.set('views', './src/views')
+
 // ポート5000でサーバを立てる
 app.listen(PORT, () => console.log(`listening on ${ PORT }`));

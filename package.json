@@ -5,6 +5,10 @@
   "description": "web api for using scheduling app",
   "main": "app.js",
   "scripts": {
+    "clean": "rimraf build/views/*",
+    "copy-assets": "ts-node tools/copyViewAssets",
+    "tsbuild": "tsc -p tsconfig.json",
+    "build": "npm run clean&&npm run copy-assets&&npm run tsbuild",
     "test": "jest",
     "test-snapshotupdate": "jest -u"
   },
@@ -12,12 +16,14 @@
   "license": "MIT",
   "dependencies": {
     "@types/config": "0.0.36",
+    "@types/ejs": "^3.0.4",
     "@types/express": "^4.17.6",
     "@types/jest": "^25.2.1",
     "@types/js-combinatorics": "^0.5.31",
     "@types/lodash": "^4.14.150",
     "@types/mongoose": "^5.7.16",
     "config": "^3.3.1",
+    "ejs": "^3.1.2",
     "express": "^4.17.1",
     "js-combinatorics": "^0.5.5",
     "lodash": "^4.17.15",
@@ -26,8 +32,10 @@
   },
   "devDependencies": {
     "@types/node": "^13.13.5",
+    "@types/shelljs": "^0.8.8",
     "babel-jest": "^26.0.1",
     "jest": "^26.0.1",
+    "shelljs": "^0.8.4",
     "ts-jest": "^25.5.1",
     "ts-node": "^8.10.1",
     "ts-node-dev": "^1.0.0-pre.44",
